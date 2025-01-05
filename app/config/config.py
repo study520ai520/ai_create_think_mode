@@ -11,6 +11,7 @@ class Config:
     
     # MongoDB配置
     MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/think_mode_db')
+    MONGO_DB = os.getenv('MONGO_DB', 'think_mode_db')
     
     # OpenAI配置
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
