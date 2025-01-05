@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
 
 # 加载环境变量
 load_dotenv()
@@ -19,7 +20,7 @@ class Config:
     
     # 构建MongoDB URI
     if MONGO_USERNAME and MONGO_PASSWORD:
-        MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}"
+        MONGO_URI = f"mongodb://{quote_plus(MONGO_USERNAME)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}"
     else:
         MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
     
