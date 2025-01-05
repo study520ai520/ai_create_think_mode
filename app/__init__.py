@@ -1,27 +1,28 @@
 from flask import Flask
 from flask_login import LoginManager
-from config.config import Config
-from config.mongodb import mongodb
+from app.config.config import Config
+from app.models.user import User
 
-# 初始化Flask应用
-app = Flask(__name__)
-app.config.from_object(Config)
-
-# 初始化LoginManager
 login_manager = LoginManager()
-login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
+login_manager.login_message = '请先登录'
+login_manager.login_message_category = 'info'
 
-# 连接MongoDB
-mongodb.connect()
+@login_manager.user_loader
+def load_user(user_id):
+    return User.find_by_id(user_id)
 
-# 注册蓝图
-from app.routes import main, auth, analysis
-app.register_blueprint(main.bp)
-app.register_blueprint(auth.bp)
-app.register_blueprint(analysis.bp)
-
-# 关闭时清理
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    mongodb.close() 
+def create_app(config_class=Config):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+    
+    # 初始化扩展
+    login_manager.init_app(app)
+    
+    # 注册蓝图
+    from app.routes.main import main
+    from app.routes.auth import auth
+    app.register_blueprint(main)
+    app.register_blueprint(auth, url_prefix='/auth')
+    
+    return app 
