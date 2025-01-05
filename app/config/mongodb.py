@@ -51,7 +51,7 @@ class MongoDB:
             
     def ensure_connected(self):
         """确保数据库已连接"""
-        if not self.connected:
+        if not self.connected or self.db is None:
             return self.connect()
         try:
             # 测试连接是否有效
@@ -94,21 +94,21 @@ class MongoDB:
     @property
     def users(self):
         """用户集合"""
-        if not self.ensure_connected() or not self.db:
+        if not self.ensure_connected() or self.db is None:
             raise ConnectionError("MongoDB未连接")
         return self.db.users
         
     @property
     def analysis_history(self):
         """分析历史集合"""
-        if not self.ensure_connected() or not self.db:
+        if not self.ensure_connected() or self.db is None:
             raise ConnectionError("MongoDB未连接")
         return self.db.analysis_history
         
     @property
     def thinking_models(self):
         """思维模型集合"""
-        if not self.ensure_connected() or not self.db:
+        if not self.ensure_connected() or self.db is None:
             raise ConnectionError("MongoDB未连接")
         return self.db.thinking_models
         
