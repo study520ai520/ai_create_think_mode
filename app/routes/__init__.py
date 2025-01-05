@@ -1,5 +1,5 @@
+"""路由模块"""
 from . import main
-from . import auth
 from . import analysis
 
-__all__ = ['main', 'auth', 'analysis']
+__all__ = ['main', 'analysis']
