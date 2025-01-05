@@ -1,48 +1,44 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
+from flask import Blueprint, request, jsonify
 from app.services.analysis_service import analysis_service
-from app.services.model_matcher import model_matcher
+from datetime import datetime
+from app.config.mongodb import mongodb
 
-bp = Blueprint('analysis', __name__, url_prefix='/analysis')
+analysis = Blueprint('analysis', __name__)
 
-@bp.route('/analyze', methods=['POST'])
-@login_required
+@analysis.route('/analyze', methods=['POST'])
 def analyze():
-    """分析问题"""
-    question = request.json.get('question')
-    if not question:
-        return jsonify({'error': '请输入问题'}), 400
-        
-    result, error = analysis_service.analyze_question(current_user.id, question)
-    if error:
-        return jsonify({'error': error}), 400
-        
-    return jsonify(result)
+    """处理分析请求"""
+    data = request.get_json()
     
-@bp.route('/history')
-@login_required
-def history():
-    """查看分析历史"""
-    analyses = analysis_service.get_user_analysis_history(current_user.id)
-    return render_template('analysis/history.html', analyses=analyses)
+    if not data or 'question' not in data or 'model_type' not in data:
+        return jsonify({
+            'success': False,
+            'error': '请提供问题描述和思维模型类型'
+        }), 400
     
-@bp.route('/detail/<analysis_id>')
-@login_required
-def detail(analysis_id):
-    """查看分析详情"""
-    analysis = analysis_service.get_analysis_by_id(analysis_id)
-    if not analysis or str(analysis.user_id) != str(current_user.id):
-        return render_template('404.html'), 404
+    try:
+        # 进行分析
+        result = analysis_service.analyze_question(
+            data['question'],
+            data['model_type']
+        )
         
-    return render_template('analysis/detail.html', analysis=analysis)
-    
-@bp.route('/models')
-@login_required
-def models():
-    """查看思维模型列表"""
-    category = request.args.get('category')
-    if category:
-        models = model_matcher.get_models_by_category(category)
-    else:
-        models = model_matcher.models.values()
-    return render_template('analysis/models.html', models=models) 
+        # 保存分析历史
+        history_record = {
+            'question': data['question'],
+            'model_type': data['model_type'],
+            'result': result,
+            'created_at': datetime.utcnow()
+        }
+        mongodb.analysis_history.insert_one(history_record)
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500 
