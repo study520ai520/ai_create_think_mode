@@ -20,25 +20,59 @@ class MongoDB:
         # 检查pymongo版本
         logger.info(f"PyMongo版本: {pymongo_version}")
         
+        # 验证配置
+        if not self._validate_config():
+            raise ValueError("MongoDB配置不完整，请检查环境变量")
+        
         # 解析MongoDB URI
         self._parse_uri()
         
         # 尝试连接
         self.connect()
     
+    def _validate_config(self):
+        """验证MongoDB配置是否完整"""
+        required_configs = {
+            'MONGO_USERNAME': Config.MONGO_USERNAME,
+            'MONGO_PASSWORD': Config.MONGO_PASSWORD,
+            'MONGO_HOST': Config.MONGO_HOST,
+            'MONGO_PORT': Config.MONGO_PORT,
+            'MONGO_DB': Config.MONGO_DB,
+            'MONGO_AUTH_SOURCE': Config.MONGO_AUTH_SOURCE
+        }
+        
+        # 检查配置完整性
+        missing_configs = [key for key, value in required_configs.items() if not value]
+        
+        if missing_configs:
+            logger.error(f"缺少必要的MongoDB配置: {', '.join(missing_configs)}")
+            logger.error("当前配置值:")
+            for key, value in required_configs.items():
+                if key != 'MONGO_PASSWORD':
+                    logger.error(f"- {key}: {value}")
+                else:
+                    logger.error(f"- {key}: {'*' * 8 if value else 'None'}")
+            return False
+            
+        logger.info("MongoDB配置验证通过")
+        return True
+    
     def _parse_uri(self):
         """解析并验证MongoDB URI"""
         try:
             if Config.MONGO_URI:
                 self.uri = Config.MONGO_URI
+                logger.info("使用环境变量中的MONGODB_URI")
             else:
                 # 构建新的URI
                 if Config.MONGO_USERNAME and Config.MONGO_PASSWORD:
                     username = quote_plus(Config.MONGO_USERNAME)
                     password = quote_plus(Config.MONGO_PASSWORD)
                     self.uri = f"mongodb://{username}:{password}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/{Config.MONGO_DB}?authSource={Config.MONGO_AUTH_SOURCE}&retryWrites=true&w=majority"
+                    logger.info("使用用户名密码构建MongoDB URI")
                 else:
                     self.uri = f"mongodb://{Config.MONGO_HOST}:{Config.MONGO_PORT}/{Config.MONGO_DB}"
+                    logger.info("使用无认证方式构建MongoDB URI")
             
             # 记录安全的URI（隐藏密码）
             safe_uri = self.uri
