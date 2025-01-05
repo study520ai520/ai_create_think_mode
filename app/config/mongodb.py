@@ -109,14 +109,9 @@ class MongoDB:
     def _create_indexes(self):
         """创建必要的索引"""
         try:
-            # 用户集合索引
-            if 'users' in self.db.list_collection_names():
-                self.db.users.create_index('email', unique=True)
-                self.db.users.create_index('username')
-            
             # 分析历史索引
             if 'analysis_history' in self.db.list_collection_names():
-                self.db.analysis_history.create_index([('user_id', 1), ('created_at', -1)])
+                self.db.analysis_history.create_index('created_at')
                 self.db.analysis_history.create_index('model_used.model_id')
             
             # 思维模型索引
@@ -137,13 +132,6 @@ class MongoDB:
             except Exception as e:
                 logger.error(f"关闭MongoDB连接失败: {str(e)}")
                 
-    @property
-    def users(self):
-        """用户集合"""
-        if not self.ensure_connected() or self.db is None:
-            raise ConnectionError("MongoDB未连接")
-        return self.db.users
-        
     @property
     def analysis_history(self):
         """分析历史集合"""
