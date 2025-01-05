@@ -1,70 +1,131 @@
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, OperationFailure
+from pymongo import MongoClient, version as pymongo_version
+from pymongo.errors import ConnectionFailure, OperationFailure, ServerSelectionTimeoutError
 from app.config.config import Config
 import logging
+import time
+from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
 class MongoDB:
+    MAX_RETRIES = 3  # 最大重试次数
+    RETRY_DELAY = 2  # 重试延迟（秒）
+    
     def __init__(self):
         """初始化MongoDB实例"""
         self.client = None
         self.db = None
         self.connected = False
-        logger.info("初始化MongoDB实例...")
-        logger.info(f"尝试连接MongoDB，URI: {Config.MONGO_URI if not Config.MONGO_PASSWORD else Config.MONGO_URI.replace(Config.MONGO_PASSWORD, '****')}")
-        self.connect()
         
-    def connect(self):
-        """连接到MongoDB数据库"""
+        # 检查pymongo版本
+        logger.info(f"PyMongo版本: {pymongo_version}")
+        
+        # 解析MongoDB URI
+        self._parse_uri()
+        
+        # 尝试连接
+        self.connect()
+    
+    def _parse_uri(self):
+        """解析并验证MongoDB URI"""
         try:
-            logger.info("创建MongoDB客户端连接...")
-            # 创建客户端连接
-            self.client = MongoClient(
-                Config.MONGO_URI,
-                serverSelectionTimeoutMS=5000  # 5秒超时
-            )
+            if Config.MONGO_URI:
+                self.uri = Config.MONGO_URI
+            else:
+                # 构建新的URI
+                if Config.MONGO_USERNAME and Config.MONGO_PASSWORD:
+                    username = quote_plus(Config.MONGO_USERNAME)
+                    password = quote_plus(Config.MONGO_PASSWORD)
+                    self.uri = f"mongodb://{username}:{password}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/{Config.MONGO_DB}?authSource={Config.MONGO_AUTH_SOURCE}&retryWrites=true&w=majority"
+                else:
+                    self.uri = f"mongodb://{Config.MONGO_HOST}:{Config.MONGO_PORT}/{Config.MONGO_DB}"
             
-            logger.info("测试MongoDB连接...")
-            # 测试连接
-            self.client.admin.command('ping')
-            
-            logger.info(f"获取数据库实例: {Config.MONGO_DB}")
-            # 获取数据库实例
-            self.db = self.client[Config.MONGO_DB]
-            
-            logger.info("创建数据库索引...")
-            # 尝试创建索引
-            self._create_indexes()
-            
-            self.connected = True
-            logger.info("MongoDB连接成功")
-            return True
-            
-        except ConnectionFailure as e:
-            logger.error(f"MongoDB连接失败: {str(e)}")
-            self.connected = False
-            return False
-            
-        except OperationFailure as e:
-            logger.error(f"MongoDB认证失败或操作失败: {str(e)}, 完整错误: {getattr(e, 'details', {})}")
-            self.connected = False
-            return False
+            # 记录安全的URI（隐藏密码）
+            safe_uri = self.uri
+            if Config.MONGO_PASSWORD:
+                safe_uri = safe_uri.replace(quote_plus(Config.MONGO_PASSWORD), '****')
+            logger.info(f"MongoDB URI: {safe_uri}")
             
         except Exception as e:
-            logger.error(f"MongoDB未知错误: {str(e)}, 类型: {type(e)}, 详情: {getattr(e, '__dict__', {})}")
+            logger.error(f"URI解析错误: {str(e)}")
+            raise
+        
+    def connect(self):
+        """连接到MongoDB数据库，包含重试机制"""
+        retry_count = 0
+        last_error = None
+        
+        while retry_count < self.MAX_RETRIES:
+            try:
+                if retry_count > 0:
+                    logger.info(f"第 {retry_count} 次重试连接MongoDB...")
+                    time.sleep(self.RETRY_DELAY)
+                
+                # 创建客户端连接
+                self.client = MongoClient(
+                    self.uri,
+                    serverSelectionTimeoutMS=5000,  # 5秒超时
+                    connectTimeoutMS=5000,
+                    socketTimeoutMS=5000,
+                    maxPoolSize=50,
+                    retryWrites=True
+                )
+                
+                # 测试连接
+                self.client.admin.command('ping')
+                
+                # 获取数据库实例
+                self.db = self.client[Config.MONGO_DB]
+                
+                # 验证认证
+                self.db.list_collection_names()
+                
+                # 创建索引
+                self._create_indexes()
+                
+                self.connected = True
+                logger.info("MongoDB连接成功")
+                return True
+                
+            except ServerSelectionTimeoutError as e:
+                last_error = f"MongoDB服务器选择超时: {str(e)}"
+                logger.error(last_error)
+                
+            except ConnectionFailure as e:
+                last_error = f"MongoDB连接失败: {str(e)}"
+                logger.error(last_error)
+                
+            except OperationFailure as e:
+                error_details = getattr(e, 'details', {})
+                if error_details.get('codeName') == 'AuthenticationFailed':
+                    last_error = f"MongoDB认证失败: {str(e)}, 详情: {error_details}"
+                    logger.error(last_error)
+                    # 认证失败不需要重试
+                    break
+                else:
+                    last_error = f"MongoDB操作失败: {str(e)}, 详情: {error_details}"
+                    logger.error(last_error)
+                
+            except Exception as e:
+                last_error = f"MongoDB未知错误: {str(e)}, 类型: {type(e)}"
+                logger.error(last_error)
+            
+            retry_count += 1
             self.connected = False
-            return False
+            
+        # 所有重试都失败了
+        if last_error:
+            logger.error(f"MongoDB连接失败，已重试 {retry_count} 次。最后的错误: {last_error}")
+        return False
             
     def ensure_connected(self):
         """确保数据库已连接"""
         if not self.connected or self.db is None:
-            logger.info("MongoDB未连接，尝试重新连接...")
             return self.connect()
+            
         try:
             # 测试连接是否有效
             self.client.admin.command('ping')
-            logger.info("MongoDB连接有效")
             return True
         except Exception as e:
             logger.error(f"MongoDB连接检查失败: {str(e)}")
@@ -89,7 +150,7 @@ class MongoDB:
                 self.db.thinking_models.create_index('name')
                 
         except Exception as e:
-            logging.error(f"创建索引失败: {str(e)}")
+            logger.error(f"创建索引失败: {str(e)}")
             
     def close(self):
         """关闭数据库连接"""
@@ -97,9 +158,9 @@ class MongoDB:
             try:
                 self.client.close()
                 self.connected = False
-                logging.info("MongoDB连接已关闭")
+                logger.info("MongoDB连接已关闭")
             except Exception as e:
-                logging.error(f"关闭MongoDB连接失败: {str(e)}")
+                logger.error(f"关闭MongoDB连接失败: {str(e)}")
                 
     @property
     def users(self):
