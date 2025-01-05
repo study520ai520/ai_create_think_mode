@@ -16,13 +16,21 @@ class Config:
     MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
     MONGO_PORT = int(os.getenv('MONGO_PORT', 27017))
     MONGO_DB = os.getenv('MONGO_DB', 'think_mode_db')
-    MONGO_AUTH_SOURCE = os.getenv('MONGO_AUTH_SOURCE', 'admin')  # 认证数据库，默认为admin
+    MONGO_AUTH_SOURCE = os.getenv('MONGO_AUTH_SOURCE', 'admin')
     
-    # 构建MongoDB URI
-    if MONGO_USERNAME and MONGO_PASSWORD:
-        MONGO_URI = f"mongodb://{quote_plus(MONGO_USERNAME)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}"
-    else:
-        MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
+    # 优先使用完整的MongoDB URI（如果提供）
+    MONGO_URI = os.getenv('MONGODB_URI')
+    
+    # 如果没有提供完整URI，则构建URI
+    if not MONGO_URI:
+        if MONGO_USERNAME and MONGO_PASSWORD:
+            MONGO_URI = f"mongodb://{quote_plus(MONGO_USERNAME)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}"
+        else:
+            MONGO_URI = f"mongodb://localhost:27017/{MONGO_DB}"
+        
+    # 如果没有用户名密码，尝试直接连接本地MongoDB
+    if not (MONGO_USERNAME and MONGO_PASSWORD) and MONGO_HOST == 'localhost':
+        MONGO_URI = f"mongodb://localhost:27017/{MONGO_DB}"
     
     # OpenAI配置
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
