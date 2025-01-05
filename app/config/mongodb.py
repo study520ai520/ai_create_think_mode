@@ -9,6 +9,7 @@ class MongoDB:
         self.client = None
         self.db = None
         self.connected = False
+        logging.info(f"正在尝试连接MongoDB，URI: {Config.MONGO_URI}")
         self.connect()
         
     def connect(self):
@@ -39,12 +40,12 @@ class MongoDB:
             return False
             
         except OperationFailure as e:
-            logging.error(f"MongoDB操作失败: {str(e)}")
+            logging.error(f"MongoDB认证失败或操作失败: {str(e)}")
             self.connected = False
             return False
             
         except Exception as e:
-            logging.error(f"MongoDB未知错误: {str(e)}")
+            logging.error(f"MongoDB未知错误: {str(e)}, 类型: {type(e)}")
             self.connected = False
             return False
             
