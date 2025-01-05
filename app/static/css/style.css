@@ -1,0 +1,170 @@
+/* 全局样式 */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* 导航栏样式 */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.navbar-brand i {
+    margin-right: 0.5rem;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* 思维模型卡片 */
+.model-card {
+    height: 100%;
+}
+
+.model-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: none;
+}
+
+.model-card .model-category {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* 分析结果样式 */
+.analysis-result {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.analysis-summary {
+    font-size: 1.1rem;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.analysis-details {
+    margin: 1rem 0;
+}
+
+.analysis-recommendations {
+    background-color: #e9ecef;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* 可视化图表样式 */
+.visualization-container {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,.1);
+}
+
+/* 表单样式 */
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+/* 加载动画 */
+.loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading-spinner i {
+    font-size: 2rem;
+    color: #0d6efd;
+}
+
+/* 反馈组件样式 */
+.feedback-form {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+.rating-stars {
+    color: #ffc107;
+    font-size: 1.5rem;
+}
+
+.rating-stars i {
+    cursor: pointer;
+}
+
+/* 历史记录列表样式 */
+.history-list {
+    list-style: none;
+    padding: 0;
+}
+
+.history-item {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    background-color: white;
+    box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,.1);
+}
+
+.history-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .analysis-result {
+        padding: 1rem;
+    }
+    
+    .visualization-container {
+        margin: 1rem 0;
+    }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+} 

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - AI思维模型分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <!-- 欢迎信息 -->
+        <div class="text-center mb-5">
+            <h1 class="display-4">AI思维模型分析</h1>
+            <p class="lead">输入您的问题，让AI为您匹配最合适的思维模型并进行深度分析</p>
+        </div>
+
+        <!-- 分析表单 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form id="analysisForm" method="POST" action="{{ url_for('analysis.analyze') }}">
+                    <div class="mb-3">
+                        <label for="question" class="form-label">您的问题</label>
+                        <textarea class="form-control" id="question" name="question" rows="4" 
+                                required placeholder="请详细描述您需要分析的问题..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoMatch" 
+                                   name="auto_match" value="1" checked>
+                            <label class="form-check-label" for="autoMatch">
+                                自动匹配最合适的思维模型
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="modelSelection" style="display: none;">
+                        <label class="form-label">选择思维模型</label>
+                        <select class="form-select" name="model_id">
+                            {% for category, models in thinking_models.items() %}
+                            <optgroup label="{{ category }}">
+                                {% for model in models %}
+                                <option value="{{ model.id }}">{{ model.name }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-brain me-2"></i>开始分析
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading-spinner">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p class="mt-2">正在分析中，请稍候...</p>
+        </div>
+
+        <!-- 分析结果 -->
+        <div id="analysisResult"></div>
+
+        <!-- 使用说明 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">使用说明</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-lightbulb me-2"></i>如何使用</h6>
+                        <ol>
+                            <li>在文本框中详细描述您的问题</li>
+                            <li>选择是否自动匹配思维模型</li>
+                            <li>点击"开始分析"按钮</li>
+                            <li>查看分析结果和可视化图表</li>
+                            <li>提供反馈帮助我们改进</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-star me-2"></i>特色功能</h6>
+                        <ul>
+                            <li>智能匹配最适合的思维模型</li>
+                            <li>深度分析问题的各个方面</li>
+                            <li>生成直观的可视化图表</li>
+                            <li>提供具体可行的建议</li>
+                            <li>支持用户反馈和优化</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 控制模型选择的显示/隐藏
+    document.getElementById('autoMatch').addEventListener('change', function() {
+        document.getElementById('modelSelection').style.display = 
+            this.checked ? 'none' : 'block';
+    });
+</script>
+{% endblock %} 

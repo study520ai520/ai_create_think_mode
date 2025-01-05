@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}分析历史 - AI思维模型分析系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- 页面标题 -->
+    <div class="text-center mb-5">
+        <h1 class="display-4">分析历史</h1>
+        <p class="lead">查看您的问题分析记录和反馈</p>
+    </div>
+
+    <!-- 分析历史列表 -->
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            {% if history_items %}
+            <div class="history-list">
+                {% for item in history_items %}
+                <div class="history-item fade-in">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-1">{{ item.question }}</h5>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ item.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            </small>
+                        </div>
+                        <span class="badge bg-primary">{{ item.model_used.name }}</span>
+                    </div>
+
+                    <!-- 分析结果摘要 -->
+                    <div class="analysis-summary mb-3">
+                        {{ item.analysis_result.summary }}
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2" 
+                                    onclick="showDetails('{{ item.id }}')">
+                                <i class="fas fa-eye me-1"></i>查看详情
+                            </button>
+                            <button class="btn btn-sm btn-outline-success me-2" 
+                                    onclick="showVisualization('{{ item.id }}')">
+                                <i class="fas fa-chart-network me-1"></i>查看图表
+                            </button>
+                        </div>
+                        <div class="text-end">
+                            {% if item.feedback.rating %}
+                            <div class="rating-display">
+                                {% for i in range(item.feedback.rating) %}
+                                <i class="fas fa-star text-warning"></i>
+                                {% endfor %}
+                                {% for i in range(5 - item.feedback.rating) %}
+                                <i class="far fa-star text-warning"></i>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary" 
+                                    onclick="showFeedback('{{ item.id }}')">
+                                <i class="fas fa-comment-alt me-1"></i>添加反馈
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- 详细内容（默认隐藏） -->
+                    <div id="details-{{ item.id }}" class="analysis-details mt-3" style="display: none;">
+                        <hr>
+                        <h6>详细分析</h6>
+                        {% for step, content in item.analysis_result.details.items() %}
+                        <div class="mb-3">
+                            <strong>{{ step }}</strong>
+                            <p>{{ content }}</p>
+                        </div>
+                        {% endfor %}
+
+                        <h6>建议</h6>
+                        <ul>
+                            {% for rec in item.analysis_result.recommendations %}
+                            <li>{{ rec }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- 可视化图表（默认隐藏） -->
+                    <div id="viz-{{ item.id }}" class="visualization-container mt-3" style="display: none;">
+                        <hr>
+                        <div class="mermaid">
+                            {{ item.visualization.mermaid_code }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- 分页 -->
+                {% if pages > 1 %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('analysis.history', page=page-1) }}">
+                                上一页
+                            </a>
+                        </li>
+                        {% for p in range(1, pages + 1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('analysis.history', page=p) }}">
+                                {{ p }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                        <li class="page-item {% if page == pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('analysis.history', page=page+1) }}">
+                                下一页
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center">
+                <img src="{{ url_for('static', filename='img/empty.svg') }}" 
+                     alt="暂无记录" class="mb-3" style="max-width: 200px;">
+                <h4>暂无分析记录</h4>
+                <p class="text-muted">开始分析您的第一个问题吧！</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>新建分析
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 反馈模态框 -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加反馈</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="feedbackForm">
+                    <input type="hidden" id="feedbackAnalysisId">
+                    <div class="mb-3 text-center">
+                        <div class="rating-stars">
+                            <i class="far fa-star" data-rating="1"></i>
+                            <i class="far fa-star" data-rating="2"></i>
+                            <i class="far fa-star" data-rating="3"></i>
+                            <i class="far fa-star" data-rating="4"></i>
+                            <i class="far fa-star" data-rating="5"></i>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">反馈意见</label>
+                        <textarea class="form-control" id="feedbackComments" rows="3" 
+                                 placeholder="请输入您的反馈意见..."></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="feedbackHelpful">
+                        <label class="form-check-label" for="feedbackHelpful">
+                            这次分析对我有帮助
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitFeedback()">提交反馈</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 显示详细信息
+    function showDetails(id) {
+        const details = document.getElementById(`details-${id}`);
+        if (details.style.display === 'none') {
+            details.style.display = 'block';
+        } else {
+            details.style.display = 'none';
+        }
+    }
+    
+    // 显示可视化图表
+    function showVisualization(id) {
+        const viz = document.getElementById(`viz-${id}`);
+        if (viz.style.display === 'none') {
+            viz.style.display = 'block';
+            // 重新渲染Mermaid图表
+            mermaid.init(undefined, viz.querySelector('.mermaid'));
+        } else {
+            viz.style.display = 'none';
+        }
+    }
+    
+    // 显示反馈模态框
+    function showFeedback(id) {
+        document.getElementById('feedbackAnalysisId').value = id;
+        const modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+        modal.show();
+    }
+    
+    // 处理星级评分
+    document.querySelectorAll('.rating-stars i').forEach(star => {
+        star.addEventListener('mouseover', function() {
+            const rating = this.dataset.rating;
+            const stars = this.parentElement.children;
+            
+            Array.from(stars).forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.remove('far');
+                    s.classList.add('fas');
+                } else {
+                    s.classList.remove('fas');
+                    s.classList.add('far');
+                }
+            });
+        });
+        
+        star.addEventListener('click', function() {
+            const rating = this.dataset.rating;
+            const stars = this.parentElement.children;
+            
+            Array.from(stars).forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.remove('far');
+                    s.classList.add('fas');
+                } else {
+                    s.classList.remove('fas');
+                    s.classList.add('far');
+                }
+            });
+        });
+    });
+    
+    // 提交反馈
+    async function submitFeedback() {
+        const analysisId = document.getElementById('feedbackAnalysisId').value;
+        const rating = document.querySelectorAll('.rating-stars .fas').length;
+        const comments = document.getElementById('feedbackComments').value;
+        const helpful = document.getElementById('feedbackHelpful').checked;
+        
+        try {
+            const response = await fetch('/analysis/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    analysis_id: analysisId,
+                    rating: rating,
+                    comments: comments,
+                    helpful: helpful
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('反馈提交失败');
+            }
+            
+            // 关闭模态框并刷新页面
+            bootstrap.Modal.getInstance(document.getElementById('feedbackModal')).hide();
+            location.reload();
+        } catch (error) {
+            console.error('反馈错误:', error);
+            alert('反馈提交失败，请稍后重试');
+        }
+    }
+</script>
+{% endblock %} 

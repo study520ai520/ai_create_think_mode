@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - AI思维模型分析系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="text-center mb-4">注册账号</h2>
+                    
+                    <form method="POST" action="{{ url_for('auth.register') }}">
+                        {{ form.csrf_token }}
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            {{ form.username(class="form-control", placeholder="请输入用户名") }}
+                            {% if form.username.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.username.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱地址</label>
+                            {{ form.email(class="form-control", placeholder="请输入邮箱地址") }}
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.email.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            {{ form.password(class="form-control", placeholder="请输入密码") }}
+                            {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                密码长度至少8位，包含字母和数字
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">确认密码</label>
+                            {{ form.confirm_password(class="form-control", placeholder="请再次输入密码") }}
+                            {% if form.confirm_password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.confirm_password.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.accept_terms(class="form-check-input") }}
+                            <label class="form-check-label" for="accept_terms">
+                                我已阅读并同意
+                                <a href="{{ url_for('main.terms') }}" target="_blank">
+                                    服务条款
+                                </a>
+                                和
+                                <a href="{{ url_for('main.privacy') }}" target="_blank">
+                                    隐私政策
+                                </a>
+                            </label>
+                            {% if form.accept_terms.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.accept_terms.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>注册
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p class="mb-0">已有账号？</p>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary mt-2">
+                            <i class="fas fa-sign-in-alt me-2"></i>立即登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 密码强度检查
+    document.getElementById('password').addEventListener('input', function() {
+        const password = this.value;
+        const strength = checkPasswordStrength(password);
+        updatePasswordStrengthIndicator(strength);
+    });
+    
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        
+        // 长度检查
+        if (password.length >= 8) strength += 1;
+        
+        // 包含数字
+        if (/\d/.test(password)) strength += 1;
+        
+        // 包含小写字母
+        if (/[a-z]/.test(password)) strength += 1;
+        
+        // 包含大写字母
+        if (/[A-Z]/.test(password)) strength += 1;
+        
+        // 包含特殊字符
+        if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+        
+        return strength;
+    }
+    
+    function updatePasswordStrengthIndicator(strength) {
+        const feedback = document.querySelector('.form-text');
+        let message = '';
+        let color = '';
+        
+        switch (strength) {
+            case 0:
+            case 1:
+                message = '密码强度：弱';
+                color = 'text-danger';
+                break;
+            case 2:
+            case 3:
+                message = '密码强度：中';
+                color = 'text-warning';
+                break;
+            case 4:
+            case 5:
+                message = '密码强度：强';
+                color = 'text-success';
+                break;
+        }
+        
+        feedback.className = 'form-text ' + color;
+        feedback.textContent = message;
+    }
+</script>
+{% endblock %} 
