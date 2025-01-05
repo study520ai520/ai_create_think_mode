@@ -10,8 +10,17 @@ class Config:
     DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
     
     # MongoDB配置
-    MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/think_mode_db')
+    MONGO_USERNAME = os.getenv('MONGO_USERNAME', '')
+    MONGO_PASSWORD = os.getenv('MONGO_PASSWORD', '')
+    MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
+    MONGO_PORT = int(os.getenv('MONGO_PORT', 27017))
     MONGO_DB = os.getenv('MONGO_DB', 'think_mode_db')
+    
+    # 构建MongoDB URI
+    if MONGO_USERNAME and MONGO_PASSWORD:
+        MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
+    else:
+        MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
     
     # OpenAI配置
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
