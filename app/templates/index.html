@@ -1,104 +1,173 @@
 {% extends "base.html" %}
 
-{% block title %}首页 - AI思维模型分析系统{% endblock %}
+{% block title %}首页 - AI思维模式分析{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <!-- 欢迎信息 -->
-        <div class="text-center mb-5">
-            <h1 class="display-4">AI思维模型分析</h1>
-            <p class="lead">输入您的问题，让AI为您匹配最合适的思维模型并进行深度分析</p>
-        </div>
-
-        <!-- 分析表单 -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form id="analysisForm" method="POST" action="{{ url_for('analysis.analyze') }}">
-                    <div class="mb-3">
-                        <label for="question" class="form-label">您的问题</label>
-                        <textarea class="form-control" id="question" name="question" rows="4" 
-                                required placeholder="请详细描述您需要分析的问题..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="autoMatch" 
-                                   name="auto_match" value="1" checked>
-                            <label class="form-check-label" for="autoMatch">
-                                自动匹配最合适的思维模型
-                            </label>
-                        </div>
-                    </div>
-                    <div class="mb-3" id="modelSelection" style="display: none;">
-                        <label class="form-label">选择思维模型</label>
-                        <select class="form-select" name="model_id">
-                            {% for category, models in thinking_models.items() %}
-                            <optgroup label="{{ category }}">
-                                {% for model in models %}
-                                <option value="{{ model.id }}">{{ model.name }}</option>
+<div class="container">
+    <div class="row">
+        <!-- 左侧：问题分析表单 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">问题分析</h5>
+                </div>
+                <div class="card-body">
+                    <form id="analysisForm" method="POST">
+                        {{ form.csrf_token }}
+                        
+                        <div class="mb-3">
+                            {{ form.question.label(class="form-label") }}
+                            {{ form.question(class="form-control", rows="5", placeholder="请详细描述您的问题...") }}
+                            {% if form.question.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.question.errors %}
+                                {{ error }}
                                 {% endfor %}
-                            </optgroup>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="text-center">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-brain me-2"></i>开始分析
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.model_type.label(class="form-label") }}
+                            {{ form.model_type(class="form-select") }}
+                            {% if form.model_type.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.model_type.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-brain"></i> 开始分析
                         </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
-
-        <!-- 加载动画 -->
-        <div class="loading-spinner">
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <p class="mt-2">正在分析中，请稍候...</p>
-        </div>
-
-        <!-- 分析结果 -->
-        <div id="analysisResult"></div>
-
-        <!-- 使用说明 -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">使用说明</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-lightbulb me-2"></i>如何使用</h6>
-                        <ol>
-                            <li>在文本框中详细描述您的问题</li>
-                            <li>选择是否自动匹配思维模型</li>
-                            <li>点击"开始分析"按钮</li>
-                            <li>查看分析结果和可视化图表</li>
-                            <li>提供反馈帮助我们改进</li>
-                        </ol>
-                    </div>
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-star me-2"></i>特色功能</h6>
-                        <ul>
-                            <li>智能匹配最适合的思维模型</li>
-                            <li>深度分析问题的各个方面</li>
-                            <li>生成直观的可视化图表</li>
-                            <li>提供具体可行的建议</li>
-                            <li>支持用户反馈和优化</li>
-                        </ul>
+        
+        <!-- 右侧：思维模型介绍 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">思维模型介绍</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="modelAccordion">
+                        {% for category, models in thinking_models.items() %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ category }}">
+                                    {{ category }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ category }}" 
+                                 class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                                 data-bs-parent="#modelAccordion">
+                                <div class="accordion-body">
+                                    {% for model_id, model in models.items() %}
+                                    <div class="mb-3">
+                                        <h6>{{ model.name }}</h6>
+                                        <p class="text-muted small">{{ model.description }}</p>
+                                        <div class="steps small text-muted">
+                                            <strong>分析步骤：</strong>
+                                            <ol class="ps-3 mb-0">
+                                                {% for step in model.steps %}
+                                                <li>{{ step }}</li>
+                                                {% endfor %}
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    {% if not loop.last %}<hr>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
+
+<!-- 分析结果模态框 -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">分析结果</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="analysisResult">
+                <!-- 结果将通过JavaScript动态插入 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('main.history') }}'">
+                    查看历史记录
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% block extra_js %}
 <script>
-    // 控制模型选择的显示/隐藏
-    document.getElementById('autoMatch').addEventListener('change', function() {
-        document.getElementById('modelSelection').style.display = 
-            this.checked ? 'none' : 'block';
+document.getElementById('analysisForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // 获取表单数据
+    const formData = {
+        question: document.getElementById('question').value,
+        model_type: document.getElementById('model_type').value
+    };
+    
+    // 发送分析请求
+    fetch('{{ url_for("analysis.analyze") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 显示分析结果
+            document.getElementById('analysisResult').innerHTML = data.result;
+            new bootstrap.Modal(document.getElementById('resultModal')).show();
+        } else {
+            alert('分析失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('发生错误，请稍后重试');
     });
+});
 </script>
+{% endblock %}
+
+<style>
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+.accordion-button:not(.collapsed) {
+    background-color: #e7f1ff;
+    color: #0d6efd;
+}
+.steps {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+</style>
 {% endblock %} 
